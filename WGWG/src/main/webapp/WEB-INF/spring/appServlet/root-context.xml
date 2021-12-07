@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<!-- 접속 정보 Properties 파일 읽어옴 -->
+	<context:property-placeholder location="classpath:properties/db.properties" />
+
+	<!-- 접속 정보 객체 BasicDataSource Bean 생성 -->
+	<bean id="dataSource"
+		class="org.apache.commons.dbcp2.BasicDataSource">
+		<property name="driverClassName" value="${driver}" />
+		<property name="url" value="${url}" />
+		<property name="username" value="${user}" />
+		<property name="password" value="${pw}" />
+
+	</bean>
+
+	<!-- Mybatis SqlSessionFactroy를 Bean 생성
+		 mybatis-spring.jar 필요함
+		 1. 접속 정보 2. mybatis 사용 환경(Alias, Setting, Mapper)
+	 --> 
+	 <bean id="sqlSessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+	 	<property name="dataSource" ref="dataSource" />
+	 	<property name="configLocation" value="classpath:mybatis/Configuration.xml" />
+	 </bean>
+
+
+	<!-- Spring Di(의존적 주입)을 위한 SqlSessionTemplate Bean 생성 -->
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg ref="sqlSessionFactoryBean" />
+	</bean>
+
+	<!-- tx Transaction을 TransactionManager 생성
+		1. Annotation을 위한 설정 => servlet-context.xml <tx:annotation-driven/>
+		2. AOP 설정 => advice(실행되는 메소드) ,pointCunt(실행되는 곳)
+	 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	
+
+	
+	<tx:advice id="txManager" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="*" propagation="REQUIRED" rollback-for="Exception"/>
+		</tx:attributes>
+	</tx:advice>
+	
+	<aop:config>
+		<aop:advisor advice-ref="txManager" pointcut="execution(public * com.min.edu.model.*Service*.*(..))"/>
+	</aop:config>
+	
+</beans>
